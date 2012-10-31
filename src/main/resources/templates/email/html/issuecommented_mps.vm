@@ -1,0 +1,18 @@
+#disable_html_escaping()
+Комментарий по Вашей заявке <b>$jirakeyutils.getCountFromKey($issue.getKey())</b>:<br/>
+<br/>
+$commentText<br/>
+<br/>
+С уважением, $!commentAuthorFullName<br/>
+#if ($commentAuthorGradeName) ${commentAuthorGradeName}. #else Служба поддержки пользователей Мегаплана. #end
+<br/>
+<p>Содержание Вашей заявки:<br/>
+------------------------------------<br/>
+$!issue.description<br/>
+------------------------------------</p>
+Помощь по Мегаплану — http://help.megaplan.ru/<br/>
+<span style="background-color: #F8F8F8;">Телефон в Москве: (495) 640-65-99<br/>
+Бесплатная круглосуточная горячая линия: 8 800 555-65-99</span><br/>
+#if($megaplanLogin)
+<p><span style="color: gray;">Вы получили это сообщение, так как являетесь контактным лицом по аккаунту <b>$megaplanLogin</b>.</span></p>
+#end

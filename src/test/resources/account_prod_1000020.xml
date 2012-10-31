@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<megaplan>
+  <account id="29192" name="prod">
+    <type name="saas_free"/>
+    <product name="CRM — клиенты и продажи Free 2012.3" version="r1099p64" fullversion="CRM — клиенты и продажи Free 2012.3 (build: r1099p64)"/>
+    <browser name="Mozilla/5.0 (Windows NT 6.1; WOW64; rv:13.0) Gecko/20100101 Firefox/13.0.1"/>
+    <screen resolution="1680x1050x24"/>
+    <question>Здравствуйте. В задаче указан заказчик. У заказчика есть гостевой доступ, но уведомления о комментариях к нему не поступают. Вопрос такой - куда поступают уведомления о комментариях у заказчика? У сотрудников понятно - назначаются. А у заказчика? (галка "уведомлять" у клиента на странице задачи стоит ) </question>
+    <subject>Уведомления при гостевом доступе</subject>
+    <typeticket name="functional"/>
+    <authorcategory name="client"/>
+    <person>
+      <firstname>Александр</firstname>
+      <lastname>Комаров</lastname>
+      <phone>+7 921 883-91-93</phone>
+      <email>ganna_pimanova@rigcinema.com</email>
+    </person>
+  </account>
+</megaplan>

@@ -1,0 +1,40 @@
+<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.name}" plugins-version="2">
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="${project.organization.name}" url="${project.organization.url}" />
+    </plugin-info>
+    <resource type="i18n" name="i18n" location="atlassian-plugin"/>
+    <resource type="download" name="names-resource" location="names"/>
+    <message-handler i18n-name-key="ru.megaplan.jira.plugins.mail.mpsmailhandler.name" key="mpshandler" class="ru.megaplan.jira.plugins.mail.mpsmailhandler.MPSMessageHandler"
+                     add-edit-url="/secure/admin/EditHandlerDetails!default.jspa"
+                     weight="0"/>
+
+    <component key="additional-info-service"
+               name="Service that fetch additional account information"
+               class="ru.megaplan.jira.plugins.mail.mpsmailhandler.service.impl.AdditionalAccountInfoServiceImpl">
+               <interface>ru.megaplan.jira.plugins.mail.mpsmailhandler.service.AdditionalAccountInfoService</interface>
+    </component>
+    <component-import key="pluginScheduler">
+        <description>SAL Scheduler</description>
+        <interface>com.atlassian.sal.api.scheduling.PluginScheduler</interface>
+    </component-import>
+
+    <component key="schedulerComponent" class="ru.megaplan.jira.plugins.mail.mpsmailhandler.service.refresh.AccountInfoRefreshService">
+    </component>
+
+    <template-context-item key="rendererHelperContextItem" component-ref="rendererHelper"
+                           context-key="helper" name="Renderer Helper Context Item"/>
+    <component-import key="eventPublisher" interface="com.atlassian.event.api.EventPublisher"/>
+    <component key="eventListener" class="ru.megaplan.jira.plugins.mail.attachmentus.AttachmentusListener">
+        <description>Attachmentus listener.</description>
+    </component>
+    <customfield-type key="attachmentusCustomField" name="Attachmentus custom field"
+                      class="ru.megaplan.jira.plugins.mail.attachmentus.customfield.AttachmentusCFType">
+        <description>Field that shows that next attach will be sent to client with comment</description>
+        <resource type="velocity" name="view" location="templates/customfield/attachmentusCfView.vm"/>
+    </customfield-type>
+    <component-import key="i18nResolver"
+                      interface="com.atlassian.sal.api.message.I18nResolver"/>
+
+</atlassian-plugin>

@@ -1,0 +1,5 @@
+#if ($name)  <p>$name</p> #end
+<form action="TestNamesAction.jspa">
+    <input name="fullname"></input>
+    <input type="submit"></input>
+</form>

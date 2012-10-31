@@ -1,0 +1,20 @@
+Комментарий по Вашей заявке $jirakeyutils.getCountFromKey($issue.getKey()):
+
+$commentText
+
+
+С уважением, $commentAuthorFullName
+#if ($commentAuthorGradeName) ${commentAuthorGradeName}. #else Служба поддержки пользователей Мегаплана. #end
+
+
+Содержание Вашей заявки:
+------------------------------------
+$!issue.description
+------------------------------------
+Помощь по Мегаплану — http://help.megaplan.ru/
+Телефон в Москве: (495) 640-65-99
+Бесплатная круглосуточная горячая линия: 8 800 555-65-99
+
+#if($megaplanLogin)
+Вы получили это сообщение, так как являетесь контактным лицом по аккаунту $megaplanLogin.
+#end

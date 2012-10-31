@@ -1,0 +1,20 @@
+<p>
+    #if($reporterFirstName)
+        Здравствуйте, $reporterFirstName.
+    #else
+        Здравствуйте.
+    #end
+</p>
+Вашей заявке присвоен номер <b>$jirakeyutils.getCountFromKey($issue.getKey())</b>.<br/>
+Ответ специалиста технической поддержки придет Вам на почту в ближайшее время.<br/>
+<br>
+Содержание Вашей заявки:
+<p>------------------------------------<br/>
+$!issue.description<br/>
+------------------------------------</p>
+Помощь по Мегаплану - http://help.megaplan.ru/<br/>
+<span style="background-color: #F8F8F8;">Телефон в Москве: (495) 640-65-99<br/>
+Бесплатная круглосуточная горячая линия: 8 800 555-65-99</span><br/>
+#if($megaplanLogin)
+<p><span style="color: gray;">Вы получили это сообщение, так как являетесь контактным лицом по аккаунту <b>$megaplanLogin</b>.</span></p>
+#end
