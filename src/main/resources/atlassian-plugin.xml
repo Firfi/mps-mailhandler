@@ -37,4 +37,12 @@
     <component-import key="i18nResolver"
                       interface="com.atlassian.sal.api.message.I18nResolver"/>
 
+    <webwork1 key="additionaltestaction" name="Additional accoun info test" class="java.lang.Object">
+        <actions>
+            <action name="ru.megaplan.jira.plugins.mail.mpsmailhandler.action.TestAction" alias="AdditionalAccountInfoTestAction">
+                <view name="success">/templates/testView.vm</view>
+            </action>
+        </actions>
+    </webwork1>
+
 </atlassian-plugin>

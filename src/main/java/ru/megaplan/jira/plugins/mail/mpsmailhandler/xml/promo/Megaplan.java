@@ -20,6 +20,8 @@ public class Megaplan {
     private String servicecompany;
     private Date expiredate;
 
+    private String farm;
+
     public Account getAccount() {
         return account;
     }
@@ -67,4 +69,11 @@ public class Megaplan {
         this.expiredate = expitedate;
     }
 
+    public String getFarm() {
+        return farm;
+    }
+
+    public void setFarm(String farm) {
+        this.farm = farm;
+    }
 }

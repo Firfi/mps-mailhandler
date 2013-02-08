@@ -18,6 +18,7 @@
     <description>Mail comments handler for megaplan support.</description>
     <packaging>atlassian-plugin</packaging>
 
+
     <dependencies>
         <dependency>
             <groupId>com.atlassian.jira</groupId>
@@ -101,14 +102,14 @@
                     <productDataVersion>${jira.version}</productDataVersion>
                     <systemPropertyVariables>
                         <atlassian.mail.senddisabled>false</atlassian.mail.senddisabled>
-                    </systemPropertyVariables><pluginArtifacts>
-                    <pluginArtifact>
-                        <groupId>com.atlassian.jira</groupId>
-                        <artifactId>jira-func-test-plugin</artifactId>
-                        <version>${jira.version}</version>
-                    </pluginArtifact>
-                </pluginArtifacts>
-
+                    </systemPropertyVariables>
+                    <pluginArtifacts>
+                        <pluginArtifact>
+                            <groupId>com.atlassian.jira</groupId>
+                            <artifactId>jira-func-test-plugin</artifactId>
+                            <version>${jira.version}</version>
+                        </pluginArtifact>
+                    </pluginArtifacts>
                 </configuration>
             </plugin>
             <plugin>
@@ -116,6 +117,7 @@
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
 

@@ -32,6 +32,7 @@ import com.thoughtworks.xstream.converters.basic.StringConverter;
 import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import com.thoughtworks.xstream.io.xml.DomDriver;
+import com.thoughtworks.xstream.mapper.MapperWrapper;
 import org.apache.commons.codec.binary.Base64;
 import org.codehaus.jackson.map.ser.impl.PropertySerializerMap;
 import org.ofbiz.core.entity.GenericEntityException;
@@ -71,7 +72,7 @@ public class TestAction extends JiraWebActionSupport {
     //private final static String serviceAddress = "www.prod.megatest.local";
     private final static String serviceAddress = "www.megaplan.ru";
     private final static String serviceUri = "/PromoSaasApiV01/Account/supportInfo/";
-    private static Long accountId = 18659L;
+    public Long accountId = 42725L;
     private final static String accessId = "6553aabd976bbe320b13560";
     private final static String secretKey = "e3b2fabde9cabd976bbe320be9d3cdedd996c4246a5919b2a12bdc0edd940c38";
     private final static String method = "GET";
@@ -143,7 +144,21 @@ public class TestAction extends JiraWebActionSupport {
         String responseBody = clientResponse.getEntity(String.class);
         xml = responseBody;
         if (statusCode == 200) {
-            XStream xStream = new XStream(new DomDriver());
+            XStream xStream = new XStream(new DomDriver()) {
+                @Override
+                protected MapperWrapper wrapMapper(MapperWrapper next) {
+                    return new MapperWrapper(next) {
+                        @Override
+                        public boolean shouldSerializeMember(Class definedIn,
+                                                             String fieldName) {
+                            if (definedIn == Object.class) {
+                                return false;
+                            }
+                            return super.shouldSerializeMember(definedIn, fieldName);
+                        }
+                    };
+                }
+            };
 
             xStream.registerConverter(new DateConverter("yyyy-MM-dd",null){
 
@@ -177,7 +192,7 @@ public class TestAction extends JiraWebActionSupport {
 
             xStream.processAnnotations(Response.class);
             xml = responseBody;
-            response = (Response) xStream.fromXML(responseBody);
+            //response = (Response) xStream.fromXML(responseBody);
         }
         } catch (Exception e) {
             accountId+=1;
@@ -230,5 +245,7 @@ public class TestAction extends JiraWebActionSupport {
         return xml;
     }
 
-
+    public void setAccountId(Long accountId) {
+        this.accountId = accountId;
+    }
 }

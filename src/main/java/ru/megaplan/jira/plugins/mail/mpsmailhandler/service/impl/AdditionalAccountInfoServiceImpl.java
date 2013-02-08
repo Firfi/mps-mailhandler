@@ -10,6 +10,7 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.converters.basic.DateConverter;
 import com.thoughtworks.xstream.converters.basic.StringConverter;
 import com.thoughtworks.xstream.io.xml.DomDriver;
+import com.thoughtworks.xstream.mapper.MapperWrapper;
 import org.apache.log4j.Logger;
 import ru.megaplan.jira.plugins.mail.mpsmailhandler.service.AdditionalAccountInfoService;
 import ru.megaplan.jira.plugins.mail.mpsmailhandler.service.util.CustomFieldMapperUtil;
@@ -107,7 +108,22 @@ public class AdditionalAccountInfoServiceImpl implements AdditionalAccountInfoSe
     }
 
     private XStream makeXstream() {
-        XStream xStream = new XStream(new DomDriver());
+        XStream xStream = new XStream(new DomDriver()) {
+            @Override
+            protected MapperWrapper wrapMapper(MapperWrapper next) {
+                return new MapperWrapper(next) {
+                    @Override
+                    public boolean shouldSerializeMember(Class definedIn,
+                        String fieldName) {
+                        if (definedIn == Object.class) {
+                            return false;
+                        }
+                        return super.shouldSerializeMember(definedIn, fieldName);
+                    }
+                };
+            }
+        };
+
 
         xStream.registerConverter(new DateConverter("yyyy-MM-dd",null){
 

@@ -73,6 +73,15 @@ public class CustomFieldMapperUtil {
         } else {
             log.info("serviceCompany is null for account with id : " + parsedResponse.getMegaplan().getAccount().getId());
         }
+        String farm = parsedResponse.getMegaplan().getFarm();
+        if (farm != null) {
+            CustomField cf = customFieldManager.getCustomFieldObjectByName(Farm.CFNAME);
+            if (cf == null) {
+                log.error("cf with name : " + Farm.CFNAME + " not found");
+            } else {
+                results.put(cf, farm);
+            }
+        }
         return results;
     }
 
@@ -352,6 +361,11 @@ public class CustomFieldMapperUtil {
     public enum ExpireDate {
         FAKEVALUE;
         public static final String CFNAME = "Дата окончания поддержки";
+    }
+
+    public enum Farm {
+        FAKEVALUE;
+        public static final String CFNAME = "Ферма";
     }
 
 }

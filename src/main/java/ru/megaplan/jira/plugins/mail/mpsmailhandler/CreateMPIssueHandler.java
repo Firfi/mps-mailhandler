@@ -311,7 +311,7 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
                 log.error("can't obtain additional info");
             }
         }
-        return fieldMapper.setCustomFields(issueObject, mpMessage,additional);
+        return fieldMapper.setCustomFields(issueObject, mpMessage, additional);
     }
 
     private MPMessage getMpMessage(Message message, int bodyPartNum) throws IOException, MessagingException {
