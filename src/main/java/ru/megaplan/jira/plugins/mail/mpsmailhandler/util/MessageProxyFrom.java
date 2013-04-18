@@ -18,10 +18,17 @@ import java.util.Enumeration;
  */
 public class MessageProxyFrom extends Message {
     private Message message;
+    private Address[] from;
+
+    public MessageProxyFrom(Message m, Address from) {
+        message = m;
+        Address[] a = {from};
+        this.from = a;
+    }
 
     @Override
     public Address[] getFrom() throws MessagingException {
-        return message.getFrom();
+        return from;
     }
 
     @Override
@@ -131,7 +138,7 @@ public class MessageProxyFrom extends Message {
 
     @Override
     public void setMessageNumber(int msgnum) {
-        message.setMessageNumber(msgnum);
+
     }
 
     @Override
@@ -146,7 +153,7 @@ public class MessageProxyFrom extends Message {
 
     @Override
     public void setExpunged(boolean expunged) {
-        message.setExpunged(expunged);
+
     }
 
     @Override

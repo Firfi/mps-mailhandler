@@ -30,12 +30,16 @@ import com.opensymphony.util.TextUtils;
 import org.apache.log4j.Logger;
 import org.ofbiz.core.entity.GenericValue;
 import ru.megaplan.jira.plugins.mail.mpsmailhandler.service.util.RegionAssigneesMapper;
+import ru.megaplan.jira.plugins.mail.mpsmailhandler.util.MessageProxyFrom;
 
 import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.atlassian.jira.ComponentManager.getComponentInstanceOfType;
 
@@ -65,7 +69,24 @@ public class CreateIssueHandlerExtended extends CreateIssueHandler {
         try
         {
             // get either the sender of the message, or the default reporter
-            User reporter = getReporter(message, context);
+
+            User reporter = null;
+
+            if (MPSMessageHandler.sanitizeAuthor(message.getFrom(), MPSMessageHandler.MEGADOMAIN) && message.getSubject().startsWith("Fwd: ")) {
+                log.warn("sanitized message with author " + Arrays.toString(message.getFrom()));
+                Pattern reporterFromSubject = Pattern.compile(
+                        ".*<<([_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,}))>>"  // <<email@email.com>>
+                );
+                Matcher m = reporterFromSubject.matcher(message.getSubject());
+                if (m.find()) {
+                    final String email = m.group(1);
+                    log.warn("gettin' reporter for email: " + email);
+                    reporter = getReporter(new MessageProxyFrom(message, new InternetAddress(email)), context);
+                    log.warn("new reporter : " + reporter);
+                }
+            }
+
+            if (reporter == null) reporter = getReporter(message, context);
 
             // no reporter - so reject the message
             if (reporter == null)

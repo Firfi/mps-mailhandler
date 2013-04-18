@@ -1,17 +1,20 @@
 package ru.megaplan.jira.plugins.mail.mpsmailhandler.service.util;
 
 import com.atlassian.jira.component.ComponentAccessor;
+import com.atlassian.jira.config.ConstantsManager;
 import com.atlassian.jira.issue.CustomFieldManager;
 import com.atlassian.jira.issue.MutableIssue;
 import com.atlassian.jira.issue.customfields.manager.OptionsManager;
 import com.atlassian.jira.issue.customfields.option.Option;
 import com.atlassian.jira.issue.fields.CustomField;
+import com.atlassian.jira.issue.priority.Priority;
 import org.apache.log4j.Logger;
 import ru.megaplan.jira.plugins.mail.mpsmailhandler.CreateMPIssueHandler;
 import ru.megaplan.jira.plugins.mail.mpsmailhandler.xml.MPMessage;
 import ru.megaplan.jira.plugins.mail.mpsmailhandler.xml.promo.Response;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -197,13 +200,27 @@ public class CustomFieldMapperUtil {
                                 throw new Exception("sla type not found for value : " + slaName);
                             }
                             setOption(issueObject, e.getKey(), sla.getName());
+                            ConstantsManager constantsManager = ComponentAccessor.getConstantsManager();
+                            Priority priority = constantsManager.getDefaultPriorityObject();
+                            Collection<Priority> cp = constantsManager.getPriorityObjects();
+                            for (Priority p : cp) {
+                                if (sla.getPriority().equalsIgnoreCase(p.getName())) {
+                                    priority = p;
+                                    break;
+                                }
+                            }
+                            if (priority != null) issueObject.setPriorityObject(priority);
                         } else if (e.getKey().getName().equals(ServiceCompany.CFNAME)) {
                             String serviceCompanyName = e.getValue().toString();
-                            ServiceCompany serviceCompany = ServiceCompany.valueOf(serviceCompanyName.toUpperCase());
-                            if (serviceCompany == null) {
-                                throw new Exception("sla type not found for value : " + serviceCompany);
+                            ServiceCompany serviceCompany;
+                            String scName;
+                            try {
+                                serviceCompany = ServiceCompany.valueOf(serviceCompanyName.toUpperCase());
+                                scName = serviceCompany.getName();
+                            } catch (IllegalArgumentException ex) {
+                                scName = ServiceCompany.MEGAPLAN.getName();
                             }
-                            setOption(issueObject, e.getKey(), serviceCompany.getName());
+                            setOption(issueObject, e.getKey(), scName);
                         } else {
                             setSimpleCustomField(issueObject, e.getKey().getNameKey(), e.getValue());
                         }
@@ -296,7 +313,7 @@ public class CustomFieldMapperUtil {
         }
     }
 
-    public enum ServiceCompany {
+    public enum     ServiceCompany {
         MEGAPLAN("Россия"), UKRAINE("Украина"), BELARUS("Беларусь"), KAZAKHSTAN("Казахстан"),
         PARTNERS("Партнёр"), IQLINE("Марс");
         public static final String CFNAME = "MPS Обслуживающая компания";
@@ -347,14 +364,19 @@ public class CustomFieldMapperUtil {
     }
 
     public enum SLA {
-        SILVER("Silver"),GOLD("Gold"),PLATINUM("Platinum");
+        SILVER("Silver", "Standard"),GOLD("Gold", "Major"),PLATINUM("Platinum", "Critical");
         public static final String CFNAME = "SLA";// = 12266L; // SLA
         private final String name;
-        SLA(String name) {
+        private final String priority;
+        SLA(String name, String priority) {
             this.name = name;
+            this.priority = priority;
         }
-        private String getName() {
+        public String getName() {
             return name;
+        }
+        public String getPriority() {
+            return priority;
         }
     }
 

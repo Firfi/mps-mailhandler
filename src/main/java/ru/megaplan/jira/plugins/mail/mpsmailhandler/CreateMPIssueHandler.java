@@ -134,7 +134,7 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
             }
 
             // get either the sender of the message, or the default reporter
-            User reporter = getReporter(mpMessage, context);
+            User reporter = getReporter(mpMessage, message, context);
 
             // no reporter - so reject the message
             if (reporter == null)
@@ -203,6 +203,7 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
             issueObject.setIssueTypeId(issueType);
             issueObject.setReporter(reporter);
 
+            // we really don't need it when there is priority setting in setCustomFields
             PriorityManager priorityManager = ComponentAccessor.getComponentOfType(PriorityManager.class);
             if (priorityManager != null) {
                 Priority defaultPriority = priorityManager.getDefaultPriority();
@@ -386,7 +387,7 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
     }
 
 
-    protected User getReporter(final MPMessage message, MessageHandlerContext context) throws MessagingException
+    protected User getReporter(final MPMessage message, Message mail, MessageHandlerContext context) throws MessagingException
     {
         log.debug("getting reporter from MPMessage");
         User reporter = userManager.getUser(message.getAccount().getPerson().getEmail());
@@ -397,7 +398,7 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
             //if createUsers is set, attempt to create a new reporter from the e-mail details
             if (createUsers)
             {
-                reporter = createUserForReporter(message, context);
+                reporter = createUserForReporter(message, mail, context);
             }
 
             // If there's a default reporter set, and we haven't created a reporter yet, attempt to use the
@@ -412,10 +413,11 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
     }
 
     @Nullable
-    protected User createUserForReporter(final MPMessage message, MessageHandlerContext context)
+    protected User createUserForReporter(final MPMessage message, Message mail, MessageHandlerContext context)
     {
-        log.debug("creating user for reporter : " + message.getAccount().getPerson().getEmail());
+        log.warn("creating user for reporter : " + message.getAccount().getPerson().getEmail());
         User reporter = null;
+        String reporterEmail = null;
         try
         {
             if (!userManager.hasWritableDirectory())
@@ -428,8 +430,8 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
             log.debug("Cannot find reporter for message. Creating new user.");
 
 
-            final String reporterEmail = message.getAccount().getPerson().getEmail();
-            log.debug("reporter email : " + reporterEmail);
+            reporterEmail = message.getAccount().getPerson().getEmail();
+            log.warn("reporter email : " + reporterEmail);
             if (!TextUtils.verifyEmail(reporterEmail))
             {
                 context.getMonitor().error("The email address [" + reporterEmail + "] received was not valid. Ensure that your mail client specified a valid 'From:' mail header. (see JRA-12203)");
@@ -453,16 +455,32 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
             {
                 reporter = context.createUser(reporterEmail, password, reporterEmail, fullName, null);
             }
+            if (reporter == null) { // maybe scary shit happened here
+                User errorReporter = userManager.getUser(reporterEmail);
+                if (errorReporter != null) {
+                    String error = "Error in creating user. Maybe we should reboot jira instance.";
+                    log.error(error);
+                    MPSMessageHandler.removeUser(errorReporter);
+                }
+                throw new NullPointerException("created user was null");
+            }
             if (context.isRealRun())
             {
-                log.debug("Created user " + reporterEmail + " as reporter of email-based issue.");
+                log.warn("Created user " + reporterEmail + " as reporter of email-based issue.");
+                MPSMessageHandler.addEmailGroup(reporter);
+                log.warn(1);
+                MPSMessageHandler.addProperties(reporter);
+                log.warn(2);
             }
         }
         catch (final Exception e)
         {
             context.getMonitor().error("Error occurred while automatically creating a new user from email", e);
+            log.error("exception in creating user attributes for user : " + message.getAccount().getPerson().getEmail());
+            MPSMessageHandler.removeUser(userManager.getUser(reporterEmail));
+
         }
-        MPSMessageHandler.addEmailGroup(reporter);
+        MPSMessageHandler.checkValidity(reporter, mail, context);
         return reporter;
     }
 
@@ -492,7 +510,7 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
                     log.debug("Trying to add attachment to issue from attachment only message.");
                 }
 
-                final ChangeItemBean res = saveAttachmentIfNecessary(message, null, getReporter(mpMessage, context), issue, context);
+                final ChangeItemBean res = saveAttachmentIfNecessary(message, null, getReporter(mpMessage, message, context), issue, context);
                 if (res != null)
                 {
                     attachmentChangeItems.add(res);
@@ -541,7 +559,7 @@ public class CreateMPIssueHandler extends CreateIssueHandler {
                 // * the option to ignore attached messages is set to true, OR
                 // * this message is in reply to the attached one (redundant info)
                 // Note: this is now covered by the shouldAttach() method
-                final ChangeItemBean res = saveAttachmentIfNecessary(part, message, getReporter(mpMessage, context), issue, context);
+                final ChangeItemBean res = saveAttachmentIfNecessary(part, message, getReporter(mpMessage, message, context), issue, context);
                 if (res != null)
                 {
                     attachmentChangeItems.add(res);

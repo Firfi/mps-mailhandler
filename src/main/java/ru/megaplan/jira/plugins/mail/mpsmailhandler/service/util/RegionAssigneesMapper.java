@@ -39,7 +39,7 @@ public enum RegionAssigneesMapper {
     }
 
     private final static String ASSIGNEE_UA = "a.belov";
-    private final static String ASSIGNEE_BY = "s.bogomaz";
+    private final static String ASSIGNEE_BY = "m.dyachkov";
     private final static String ASSIGNEE_KZ = "t.sarsenbaev";
 
     private final Map<String, Region> emailToRegionMapping = new LinkedHashMap<String, Region>();

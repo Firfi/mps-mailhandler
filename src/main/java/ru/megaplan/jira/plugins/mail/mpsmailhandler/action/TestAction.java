@@ -72,7 +72,7 @@ public class TestAction extends JiraWebActionSupport {
     //private final static String serviceAddress = "www.prod.megatest.local";
     private final static String serviceAddress = "www.megaplan.ru";
     private final static String serviceUri = "/PromoSaasApiV01/Account/supportInfo/";
-    public Long accountId = 42725L;
+    public Long accountId = 24574L;
     private final static String accessId = "6553aabd976bbe320b13560";
     private final static String secretKey = "e3b2fabde9cabd976bbe320be9d3cdedd996c4246a5919b2a12bdc0edd940c38";
     private final static String method = "GET";

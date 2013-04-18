@@ -2,10 +2,12 @@ package ru.megaplan.jira.plugins.mail.mpsmailhandler;
 
 import com.atlassian.core.AtlassianCoreException;
 import com.atlassian.core.user.preferences.Preferences;
+import com.atlassian.core.util.RandomGenerator;
 import com.atlassian.crowd.embedded.api.CrowdService;
 import com.atlassian.crowd.embedded.api.Group;
 import com.atlassian.crowd.embedded.api.User;
 import com.atlassian.jira.component.ComponentAccessor;
+import com.atlassian.jira.event.user.UserEventType;
 import com.atlassian.jira.exception.AddException;
 import com.atlassian.jira.exception.PermissionException;
 import com.atlassian.jira.exception.RemoveException;
@@ -26,22 +28,35 @@ import com.atlassian.jira.user.preferences.PreferenceKeys;
 import com.atlassian.jira.user.preferences.UserPreferencesManager;
 import com.atlassian.jira.user.util.UserUtil;
 import com.atlassian.jira.web.util.FileNameCharacterCheckerUtil;
+import com.atlassian.mail.Email;
+import com.atlassian.mail.MailException;
+import com.atlassian.mail.MailFactory;
 import com.atlassian.mail.MailUtils;
+import com.atlassian.mail.queue.AbstractMailQueueItem;
+import com.atlassian.mail.server.SMTPMailServer;
+import com.atlassian.util.concurrent.Nullable;
+import com.opensymphony.util.TextUtils;
 import com.sun.mail.imap.IMAPMessage;
 import org.apache.log4j.Logger;
 import ru.megaplan.jira.plugins.mail.mpsmailhandler.message.MessageSubjectWrapper;
+import ru.megaplan.jira.plugins.mail.mpsmailhandler.util.MessageProxyFrom;
 import ru.megaplan.jira.plugins.mail.mpsmailhandler.util.NotJiraMailUtils;
 
+import javax.activation.DataHandler;
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created with IntelliJ IDEA.
@@ -54,9 +69,10 @@ public class MPSMessageHandler extends CreateOrCommentHandler {
 
     private static Logger log = Logger.getLogger(MPSMessageHandler.class);
 
+    private static final String adminUserName = "megaplan";
     private static final String FALSE = "false";
     private static final String UTIDOMAIN = "utinet.ru";
-    private static final String MEGADOMAIN = "megaplan.ru";
+    public static final String MEGADOMAIN = "megaplan.ru";
     private static final String MEGARESPONSE = "noreply@megaplan.ru";
     private static final String UNDELIEVERED = "Undelivered Mail Returned to Sender";
     private static final String EMAIL_ACCOUNTS_GROUP = "email-accounts";
@@ -73,6 +89,8 @@ public class MPSMessageHandler extends CreateOrCommentHandler {
         boolean doDelete = false;
 
         try {
+
+            log.warn("received some message : " + message.getSubject());
 
 
             String subject = message.getSubject();
@@ -278,7 +296,7 @@ public class MPSMessageHandler extends CreateOrCommentHandler {
         return false;
     }
 
-    private boolean sanitizeAuthor(Address[] from, String... domains) {
+    public static boolean sanitizeAuthor(Address[] from, String... domains) {
         if (from == null || from.length == 0) return false;
         for (Address address : from) {
             if (!(address instanceof InternetAddress)) continue;
@@ -305,26 +323,106 @@ public class MPSMessageHandler extends CreateOrCommentHandler {
 
     @Override
     protected User createUserForReporter(final Message message, MessageHandlerContext context) {
-        User u = super.createUserForReporter(message, context);
-        if (u == null) {
-            try {
-                final String error = "can't find reporter in email message : " + message.getSubject();
-                context.getMonitor().warning(error);
-                context.getMonitor().messageRejected(message, error);
-            } catch (MessagingException e) {
-                context.getMonitor().warning("and more error : " + e.getMessage());
+        User u = null;
+        try {
+            u = createUserDebug(message, context);
+            log.warn("creating user : " + u);
+            if (u == null) {
+                try {
+                    final String error = "can't find reporter in email message : " + message.getSubject();
+                    context.getMonitor().warning(error);
+                    Address[] ass = message.getFrom();
+                    Address a = (ass.length > 0? ass[0]: null);
+                    log.warn("corrupted address is : " + a);
+                    if (a != null && a instanceof InternetAddress) {
+                        String addr = ((InternetAddress) a).getAddress();
+                        User errorReporter = ComponentAccessor.getUserManager().getUser(addr);
+                        log.warn("reporter for corrupted address " + addr + " is " + errorReporter);
+                        if (errorReporter != null) {
+                            removeUser(errorReporter);
+                        }
+                    }
+                    throw new NullPointerException("created user is null");
+                } catch (MessagingException e) {
+                    throw new NullPointerException("created user is null" + " and more error : " + e.getMessage());
+                }
+            } else {
+                if (context.isRealRun()) {
+                    addEmailGroup(u);
+                    addProperties(u);
+                    checkValidity(u, message, context);
+                }
             }
-        } else {
-            if (context.isRealRun()) {
-                addEmailGroup(u);
-                addProperties(u);
-            }
+        } catch (RuntimeException e) {
+            String error = "error occured creating user : " + u;
+            log.error(error);
+            throw e;
         }
+
 
         return u;
     }
 
-    private void addProperties(User u) {
+    protected User createUserDebug(final Message message, MessageHandlerContext context)
+    {
+        User reporter = null;
+        log.warn("createuserdebug");
+        try
+        {
+            if (!userManager.hasWritableDirectory())
+            {
+                context.getMonitor().warning("Unable to create user for reporter because no user directories are writable.");
+                return null;
+            }
+
+            // If reporter is not a recognised user, then create one from the information in the e-mail
+            log.debug("Cannot find reporter for message. Creating new user.");
+
+            final Address[] senders = message.getFrom();
+            if (senders == null || senders.length == 0)
+            {
+                context.getMonitor().error("Cannot retrieve sender information from the message.");
+                return null;
+            }
+            final InternetAddress internetAddress = (InternetAddress) senders[0];
+            final String reporterEmail = internetAddress.getAddress();
+            if (!TextUtils.verifyEmail(reporterEmail))
+            {
+                context.getMonitor().error("The email address [" + reporterEmail + "] received was not valid. Ensure that your mail client specified a valid 'From:' mail header. (see JRA-12203)");
+                return null;
+            }
+            String fullName = internetAddress.getPersonal();
+            if ((fullName == null) || (fullName.trim().length() == 0))
+            {
+                fullName = reporterEmail;
+            }
+
+            final String password = RandomGenerator.randomPassword();
+            log.warn("creating reporter");
+            if (notifyUsers)
+            {
+                reporter = context.createUser(reporterEmail, password, reporterEmail, fullName, UserEventType.USER_CREATED);
+            }
+            else
+            {
+                reporter = context.createUser(reporterEmail, password, reporterEmail, fullName, null);
+            }
+            log.warn("reporter created: " + reporter);
+            if (context.isRealRun())
+            {
+                log.debug("Created user " + reporterEmail + " as reporter of email-based issue.");
+            }
+        }
+        catch (final Exception e)
+        {
+            context.getMonitor().error("Error occurred while automatically creating a new user from email", e);
+            log.warn("create exception", e);
+        }
+        return reporter;
+    }
+
+
+    public static void addProperties(User u) {
         UserPreferencesManager userPreferencesManager = ComponentAccessor.getUserPreferencesManager();
         Preferences preferences = userPreferencesManager.getPreferences(u);
         try {
@@ -336,7 +434,48 @@ public class MPSMessageHandler extends CreateOrCommentHandler {
         }
     }
 
+    public static void checkValidity(User u, Message message, MessageHandlerContext context) {
+        GroupManager gm = ComponentAccessor.getGroupManager();
+        log.warn("user groups : " + Arrays.toString(gm.getGroupNamesForUser(u).toArray()));
+        if (!gm.isUserInGroup(u.getName(), EMAIL_ACCOUNTS_GROUP)) {
+            String error = "Can't add user " + u.getName() + " in group " + EMAIL_ACCOUNTS_GROUP;
+            log.error(error);
+            context.getMonitor().error(error);
+            context.getMonitor().messageRejected(message, error);
+            final Email finalEmail = new Email("igor.loskutoff@gmail.com");
+            finalEmail.setBody("SCARY SHIT HAPPENED " + error);
+            ComponentAccessor.getMailQueue().addItem(new AbstractMailQueueItem() {
+                @Override
+                public void send() throws MailException {
+                    incrementSendCount();
+
+                    SMTPMailServer smtpMailServer = MailFactory.getServerManager().getDefaultSMTPMailServer();
+
+                    if (smtpMailServer == null) {
+                        return;
+                    }
+
+                    // Check if mailing is disabled && if SMTPMailServer has been set
+                    if (!MailFactory.isSendingDisabled()){
+                        // If not, send the message
+                        if (mailThreader != null) mailThreader.threadEmail(finalEmail);
+                        log.warn("sending warning email");
+                        smtpMailServer.send(finalEmail);
+                        if (mailThreader != null) mailThreader.storeSentEmail(finalEmail);
+                    }
+                }
+            });
+            removeUser(u);
+        }
+    }
+
+    public static void removeUser(@Nullable User u) {
+        if (u != null)
+            ComponentAccessor.getUserUtil().removeUser(ComponentAccessor.getUserManager().getUser(adminUserName), u);
+    }
+
     public static void addEmailGroup(User user) {
+        log.warn("adding email group : " + user);
         GroupManager gm = ComponentAccessor.getGroupManager();
         Collection<Group> gs = gm.getGroupsForUser(user);
         UserUtil ui =  ComponentAccessor.getUserUtil();

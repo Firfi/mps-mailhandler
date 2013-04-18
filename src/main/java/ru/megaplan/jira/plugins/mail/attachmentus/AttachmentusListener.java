@@ -52,7 +52,10 @@ import javax.mail.Multipart;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimeUtility;
+import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -148,6 +151,9 @@ public class AttachmentusListener implements InitializingBean, DisposableBean {
 
     }
 
+    public void IssueEvent(final IssueEvent issueEvent) {
+
+    }
 
 
     @EventListener
@@ -162,7 +168,6 @@ public class AttachmentusListener implements InitializingBean, DisposableBean {
         }
         if (!isComment && !isCreate)
         {
-            //log.debug("Event type is not \"commented\" or not \"created\" but: " + issueEvent.getEventTypeId() + ", so skip it");
             return;
         }
 
